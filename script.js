@@ -1,7 +1,6 @@
 let confessions = [];
 let likedPosts = new Set();
 let dislikedPosts = new Set();
-
 function submitConfession() {
   const input = document.getElementById("confessionInput");
   const list = document.getElementById("confessionsList");
