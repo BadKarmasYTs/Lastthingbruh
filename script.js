@@ -1,93 +1,98 @@
-const confessionsKey = 'confessions';
+let confessions = [];
+let likedPosts = new Set();
+let dislikedPosts = new Set();
 
-function loadConfessions() {
-  const confessions = JSON.parse(localStorage.getItem(confessionsKey)) || [];
-  const confessionsList = document.getElementById('confessionsList');
-  confessionsList.innerHTML = ''; 
+function submitConfession() {
+  const input = document.getElementById("confessionInput");
+  const list = document.getElementById("confessionsList");
+  const nickname = document.getElementById("nickname").value.trim() || "Anonymous";
+  const category = document.getElementById("category").value;
 
-  // Sort confessions by upvotes
-  confessions.sort((a, b) => b.upvotes - a.upvotes);
+  const text = input.value.trim();
+  if (!text) return;
 
-  confessions.forEach((confession, index) => {
-    const confessionDiv = document.createElement('div');
-    confessionDiv.classList.add('confession');
-    
-    // Calculate time ago
-    const timeAgo = getTimeAgo(confession.timestamp);
-    
-    confessionDiv.innerHTML = `
-      <p><strong>${confession.nickname || 'Anonymous'}</strong> (${timeAgo})</p>
-      <p class="category">Category: ${confession.category}</p>
-      <p>${confession.text}</p>
+  const id = Date.now();
+  const newConfession = {
+    id,
+    text,
+    nickname,
+    category,
+    timestamp: new Date(),
+    likes: 0,
+    dislikes: 0
+  };
+
+  confessions.unshift(newConfession);
+  updateConfessions();
+  input.value = "";
+  document.getElementById("confessionCounter").innerText = `Total Confessions: ${confessions.length}`;
+}
+
+function updateConfessions() {
+  const list = document.getElementById("confessionsList");
+  list.innerHTML = "";
+
+  confessions.forEach(conf => {
+    const el = document.createElement("div");
+    el.className = "confession";
+
+    const timeAgo = timeSince(new Date(conf.timestamp));
+
+    el.innerHTML = `
+      <p><strong>${conf.nickname}</strong> • <span class="category">${conf.category}</span> • <span class="time">${timeAgo}</span></p>
+      <p>${conf.text}</p>
       <div class="reaction-container">
-        <span class="upvote" onclick="vote(${index}, 'upvote')">👍 ${confession.upvotes}</span>
-        <span class="downvote" onclick="vote(${index}, 'downvote')">👎 ${confession.downvotes}</span>
+        <span class="upvote" onclick="likeConfession(${conf.id})">👍 ${conf.likes}</span>
+        <span class="downvote" onclick="dislikeConfession(${conf.id})">👎 ${conf.dislikes}</span>
       </div>
     `;
-    confessionsList.appendChild(confessionDiv);
+    list.appendChild(el);
   });
-
-  document.getElementById('confessionCounter').innerText = `Total Confessions: ${confessions.length}`;
 }
 
-function postConfession() {
-  const confessionInput = document.getElementById('confessionInput');
-  const nicknameInput = document.getElementById('nickname');
-  const categorySelect = document.getElementById('category');
-  const confessionText = confessionInput.value.trim();
-  const nickname = nicknameInput.value.trim();
-  const category = categorySelect.value;
-
-  if (confessionText) {
-    const confessions = JSON.parse(localStorage.getItem(confessionsKey)) || [];
-    const newConfession = {
-      text: confessionText,
-      upvotes: 0,
-      downvotes: 0,
-      nickname: nickname || 'Anonymous',
-      category: category,
-      timestamp: Date.now()
-    };
-    confessions.push(newConfession);
-    localStorage.setItem(confessionsKey, JSON.stringify(confessions));
-    confessionInput.value = '';
-    loadConfessions();
-    confetti();  // Trigger confetti animation
-  }
+function likeConfession(id) {
+  if (likedPosts.has(id)) return;
+  likedPosts.add(id);
+  dislikedPosts.delete(id);
+  const conf = confessions.find(c => c.id === id);
+  if (conf) conf.likes++;
+  updateConfessions();
 }
 
-function getTimeAgo(timestamp) {
-  const now = Date.now();
-  const diff = now - timestamp;
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
-  if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-  if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-  return `${seconds} second${seconds > 1 ? 's' : ''} ago`;
-}
-
-function vote(index, type) {
-  const confessions = JSON.parse(localStorage.getItem(confessionsKey)) || [];
-  if (type === 'upvote') {
-    confessions[index].upvotes++;
-  } else if (type === 'downvote') {
-    confessions[index].downvotes++;
-  }
-  localStorage.setItem(confessionsKey, JSON.stringify(confessions));
-  loadConfessions();
+function dislikeConfession(id) {
+  if (dislikedPosts.has(id)) return;
+  dislikedPosts.add(id);
+  likedPosts.delete(id);
+  const conf = confessions.find(c => c.id === id);
+  if (conf) conf.dislikes++;
+  updateConfessions();
 }
 
 function toggleDarkMode() {
-  document.body.classList.toggle('dark-mode');
+  document.body.classList.toggle("dark-mode");
 }
 
-function addEmoji(emoji) {
-  const confessionInput = document.getElementById('confessionInput');
-  confessionInput.value += emoji;
+function timeSince(date) {
+  const seconds = Math.floor((new Date() - date) / 1000);
+  const intervals = [
+    { label: "year", secs: 31536000 },
+    { label: "month", secs: 2592000 },
+    { label: "day", secs: 86400 },
+    { label: "hour", secs: 3600 },
+    { label: "minute", secs: 60 },
+    { label: "second", secs: 1 },
+  ];
+  for (const i of intervals) {
+    const count = Math.floor(seconds / i.secs);
+    if (count >= 1) return `${count} ${i.label}${count > 1 ? "s" : ""} ago`;
+  }
+  return "Just now";
 }
 
-loadConfessions();
+document.querySelectorAll(".emoji").forEach(e => {
+  e.onclick = () => {
+    const input = document.getElementById("confessionInput");
+    input.value += e.innerText;
+    input.focus();
+  };
+});
