@@ -202,3 +202,17 @@ body.dark-mode .confession {
     font-size: 1rem;
   }
 }
+
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea {
+  background-color: #2a2a2a;
+  color: #fff;
+  border-color: #444;
+}
+
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder {
+  color: #aaa;
+}
+
